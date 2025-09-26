@@ -33,7 +33,7 @@ func (st *StreamTransport) ReceiveFromRadio(ctx context.Context) (*proto.FromRad
 	packet := new(proto.FromRadio)
 	err = protobuf.Unmarshal(buf, packet)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshalling error: %w", err)
+		return nil, ErrInvalidPacketFormat
 	}
 	return packet, nil
 }

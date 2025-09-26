@@ -9,3 +9,8 @@ type Transport interface {
 	SendToRadio(ctx context.Context, packet *proto.ToRadio) error
 	ReceiveFromRadio(ctx context.Context) (*proto.FromRadio, error)
 }
+
+type MeshTransport interface {
+	SendToMesh(ctx context.Context, packet *proto.MeshPacket) error
+	ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, error)
+}

@@ -70,7 +70,7 @@ func (ht *HttpTransport) ReceiveFromRadio(ctx context.Context) (*proto.FromRadio
 	packet := new(proto.FromRadio)
 	err = protobuf.Unmarshal(body, packet)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshalling error: %w", err)
+		return nil, ErrInvalidPacketFormat
 	}
 	return packet, nil
 }
