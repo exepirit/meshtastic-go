@@ -10,6 +10,8 @@ import (
 	"net/http"
 )
 
+var _ Transport = &HttpTransport{}
+
 // HttpTransport represents a transport mechanism over HTTP for communicating with a Meshtastic device.
 type HttpTransport struct {
 	// URL is the base URL of the meshtastic API endpoint.

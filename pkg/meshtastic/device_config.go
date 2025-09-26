@@ -14,9 +14,9 @@ type DeviceModuleConfig struct {
 }
 
 // GetState sends a request for the current configuration to the radio and retrieves the state of the device.
-func (m *DeviceModuleConfig) GetState() (DeviceState, error) {
+func (m *DeviceModuleConfig) GetState(ctx context.Context) (DeviceState, error) {
 	configId := uint32(rand.Int())
-	err := m.transport.SendToRadio(context.TODO(), &proto.ToRadio{
+	err := m.transport.SendToRadio(ctx, &proto.ToRadio{
 		PayloadVariant: &proto.ToRadio_WantConfigId{
 			WantConfigId: configId,
 		},
@@ -28,7 +28,8 @@ func (m *DeviceModuleConfig) GetState() (DeviceState, error) {
 	slog.Debug("Configuration request is sent")
 
 	var state DeviceState
-	for packet, err := range m.transport.ReceiveStream(context.TODO()) {
+	for {
+		packet, err := m.transport.ReceiveFromRadio(ctx)
 		if err != nil {
 			return state, fmt.Errorf("failed to read response: %w", err)
 		}
@@ -51,7 +52,6 @@ func (m *DeviceModuleConfig) GetState() (DeviceState, error) {
 			continue // unexpected payload. ignore it
 		}
 	}
-	return state, nil
 }
 
 // DeviceState represents the current state of a device.

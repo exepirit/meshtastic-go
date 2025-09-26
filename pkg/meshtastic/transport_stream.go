@@ -8,38 +8,17 @@ import (
 	"github.com/exepirit/meshtastic_exporter/pkg/meshtastic/proto"
 	protobuf "google.golang.org/protobuf/proto"
 	"io"
-	"iter"
+	"log/slog"
 	"sync"
 )
+
+var _ Transport = &StreamTransport{}
 
 // StreamTransport represents a transport layer using a Stream (e.g., TCP connection or serial port).
 type StreamTransport struct {
 	Stream io.ReadWriteCloser
+	Logger *slog.Logger
 	lock   sync.Mutex
-}
-
-// ReceiveStream continuously reads packets from the stream and yields them in a sequence.
-func (st *StreamTransport) ReceiveStream(ctx context.Context) iter.Seq2[*proto.FromRadio, error] {
-	return func(yield func(*proto.FromRadio, error) bool) {
-		st.lock.Lock()
-		defer st.lock.Unlock()
-		for {
-			buf, err := st.readBytes()
-			if err != nil {
-				if yield(nil, err) {
-					continue
-				} else {
-					return
-				}
-			}
-
-			packet := new(proto.FromRadio)
-			err = protobuf.Unmarshal(buf, packet)
-			if !yield(packet, err) {
-				return
-			}
-		}
-	}
 }
 
 // ReceiveFromRadio reads a single packet from the stream and returns it.
