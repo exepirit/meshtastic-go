@@ -30,14 +30,13 @@ type MqttTransport struct {
 
 // SendPacketOptions holds configuration options for sending a mesh packet.
 type SendPacketOptions struct {
-	RadioPreset RadioPreset
-	ChannelID   string
-	DeviceID    string
+	ChannelID string
+	DeviceID  string
 }
 
 // SendToMesh sends a mesh packet to the network via MQTT.
 func (mt *MqttTransport) SendToMesh(_ context.Context, packet *proto.MeshPacket) error {
-	topic := fmt.Sprintf("%s/2/e/%s/%s", mt.RootTopic, mt.SendOpts.RadioPreset.Name, mt.SendOpts.DeviceID)
+	topic := fmt.Sprintf("%s/2/e/%s/%s", mt.RootTopic, mt.SendOpts.ChannelID, mt.SendOpts.DeviceID)
 
 	envelope := proto.ServiceEnvelope{
 		Packet:    packet,
