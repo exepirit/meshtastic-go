@@ -10,21 +10,29 @@ import (
 	protobuf "google.golang.org/protobuf/proto"
 )
 
+// MqttTransport is an MQTT-based transport for Meshtastic communication.
 type MqttTransport struct {
+	// BrokerURL is the URL of the MQTT broker to connect to.
 	BrokerURL string
-	Username  string
-	Password  string
-	AppName   string
+	// Username is the username for MQTT authentication.
+	Username string
+	// Password is the password for MQTT authentication.
+	Password string
+	// AppName is a unique identifier for the application, used in the MQTT client ID.
+	AppName string
+	// RootTopic is the base topic for all messages.
 	RootTopic string
 
 	client     mqtt.Client
 	messagesCh chan mqtt.Message
 }
 
+// SendToMesh sends a mesh packet to the network via MQTT.
 func (mt *MqttTransport) SendToMesh(ctx context.Context, packet *proto.MeshPacket) error {
 	return errors.New("send to mesh: not implemented")
 }
 
+// ReceiveFromMesh receives a mesh packet from the network via MQTT.
 func (mt *MqttTransport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, error) {
 	select {
 	case <-ctx.Done():
@@ -43,6 +51,9 @@ func (mt *MqttTransport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket
 	}
 }
 
+// Connect establishes an MQTT connection to the broker.
+// It generates a random client ID, connects to the broker, and subscribes
+// to all subtopics under the RootTopic.
 func (mt *MqttTransport) Connect(buffer int) error {
 	if mt.client != nil && mt.client.IsConnected() {
 		return nil
@@ -77,6 +88,9 @@ func (mt *MqttTransport) Connect(buffer int) error {
 	return nil
 }
 
+// Disconnect closes the MQTT connection and the message channel.
+// It ensures that the client is disconnected and the channel is closed
+// to prevent further message processing.
 func (mt *MqttTransport) Disconnect() {
 	if mt.client != nil && mt.client.IsConnected() {
 		mt.client.Disconnect(1000)
