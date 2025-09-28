@@ -3,7 +3,7 @@ package meshtastic
 import (
 	"context"
 	"fmt"
-	"github.com/exepirit/meshtastic_exporter/pkg/meshtastic/proto"
+	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	"log/slog"
 	"math/rand"
 )

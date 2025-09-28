@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/exepirit/meshtastic_exporter/pkg/meshtastic/proto"
+	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	protobuf "google.golang.org/protobuf/proto"
 )
 

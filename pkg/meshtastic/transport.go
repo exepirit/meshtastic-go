@@ -2,7 +2,7 @@ package meshtastic
 
 import (
 	"context"
-	"github.com/exepirit/meshtastic_exporter/pkg/meshtastic/proto"
+	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 )
 
 // Transport defines methods for sending and receiving packets directly to and from the radio hardware.

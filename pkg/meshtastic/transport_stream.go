@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/exepirit/meshtastic_exporter/pkg/meshtastic/proto"
+	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	protobuf "google.golang.org/protobuf/proto"
 	"io"
 	"log/slog"

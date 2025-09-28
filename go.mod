@@ -1,4 +1,4 @@
-module github.com/exepirit/meshtastic_exporter
+module github.com/exepirit/meshtastic-go
 
 go 1.24.0
 
