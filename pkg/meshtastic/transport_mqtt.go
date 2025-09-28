@@ -3,7 +3,6 @@ package meshtastic
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/exepirit/meshtastic_exporter/pkg/meshtastic/proto"
@@ -22,14 +21,37 @@ type MqttTransport struct {
 	AppName string
 	// RootTopic is the base topic for all messages.
 	RootTopic string
+	// SendOpts is the configuration options for sending a mesh packet.
+	SendOpts SendPacketOptions
 
 	client     mqtt.Client
 	messagesCh chan mqtt.Message
 }
 
+// SendPacketOptions holds configuration options for sending a mesh packet.
+type SendPacketOptions struct {
+	RadioPreset RadioPreset
+	ChannelID   string
+	DeviceID    string
+}
+
 // SendToMesh sends a mesh packet to the network via MQTT.
-func (mt *MqttTransport) SendToMesh(ctx context.Context, packet *proto.MeshPacket) error {
-	return errors.New("send to mesh: not implemented")
+func (mt *MqttTransport) SendToMesh(_ context.Context, packet *proto.MeshPacket) error {
+	topic := fmt.Sprintf("%s/2/e/%s/%s", mt.RootTopic, mt.SendOpts.RadioPreset.Name, mt.SendOpts.DeviceID)
+
+	envelope := proto.ServiceEnvelope{
+		Packet:    packet,
+		ChannelId: mt.SendOpts.ChannelID,
+		GatewayId: mt.SendOpts.DeviceID,
+	}
+	msgData, err := protobuf.Marshal(&envelope)
+	if err != nil {
+		return fmt.Errorf("marshalling error: %w", err)
+	}
+
+	token := mt.client.Publish(topic, 0, false, msgData)
+	<-token.Done()
+	return token.Error()
 }
 
 // ReceiveFromMesh receives a mesh packet from the network via MQTT.
