@@ -1,18 +1,34 @@
-package meshtastic
+package serial
 
 import (
 	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/exepirit/meshtastic-go/pkg/meshtastic"
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
+	"go.bug.st/serial"
 	protobuf "google.golang.org/protobuf/proto"
 	"io"
 	"log/slog"
 	"sync"
 )
 
-var _ Transport = &StreamTransport{}
+// NewTransport creates a new SerialTransport instance for the given serial port.
+// It opens the specified serial port with default settings (115200 baud rate).
+func NewTransport(port string) (*StreamTransport, error) {
+	mode := &serial.Mode{
+		BaudRate: 115200,
+	}
+	p, err := serial.Open(port, mode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open serial port: %w", err)
+	}
+
+	return &StreamTransport{Stream: p}, nil
+}
+
+var _ meshtastic.Transport = &StreamTransport{}
 
 // StreamTransport represents a transport layer using a Stream (e.g., TCP connection or serial port).
 type StreamTransport struct {
@@ -33,7 +49,7 @@ func (st *StreamTransport) ReceiveFromRadio(ctx context.Context) (*proto.FromRad
 	packet := new(proto.FromRadio)
 	err = protobuf.Unmarshal(buf, packet)
 	if err != nil {
-		return nil, ErrInvalidPacketFormat
+		return nil, meshtastic.ErrInvalidPacketFormat
 	}
 	return packet, nil
 }

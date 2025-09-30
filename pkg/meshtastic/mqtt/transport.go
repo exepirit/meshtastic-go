@@ -1,16 +1,17 @@
-package meshtastic
+package mqtt
 
 import (
 	"context"
 	"crypto/rand"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/exepirit/meshtastic-go/pkg/meshtastic"
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	protobuf "google.golang.org/protobuf/proto"
 )
 
-// MqttTransport is an MQTT-based transport for Meshtastic communication.
-type MqttTransport struct {
+// Transport is an MQTT-based transport for Meshtastic communication.
+type Transport struct {
 	// BrokerURL is the URL of the MQTT broker to connect to.
 	BrokerURL string
 	// Username is the username for MQTT authentication.
@@ -35,7 +36,7 @@ type SendPacketOptions struct {
 }
 
 // SendToMesh sends a mesh packet to the network via MQTT.
-func (mt *MqttTransport) SendToMesh(_ context.Context, packet *proto.MeshPacket) error {
+func (mt *Transport) SendToMesh(_ context.Context, packet *proto.MeshPacket) error {
 	topic := fmt.Sprintf("%s/2/e/%s/%s", mt.RootTopic, mt.SendOpts.ChannelID, mt.SendOpts.DeviceID)
 
 	envelope := proto.ServiceEnvelope{
@@ -54,7 +55,7 @@ func (mt *MqttTransport) SendToMesh(_ context.Context, packet *proto.MeshPacket)
 }
 
 // ReceiveFromMesh receives a mesh packet from the network via MQTT.
-func (mt *MqttTransport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, error) {
+func (mt *Transport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -65,7 +66,7 @@ func (mt *MqttTransport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket
 
 		var envelope proto.ServiceEnvelope
 		if err := protobuf.Unmarshal(msg.Payload(), &envelope); err != nil {
-			return nil, ErrInvalidPacketFormat
+			return nil, meshtastic.ErrInvalidPacketFormat
 		}
 
 		return envelope.GetPacket(), nil
@@ -75,7 +76,7 @@ func (mt *MqttTransport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket
 // Connect establishes an MQTT connection to the broker.
 // It generates a random client ID, connects to the broker, and subscribes
 // to all subtopics under the RootTopic.
-func (mt *MqttTransport) Connect(buffer int) error {
+func (mt *Transport) Connect(buffer int) error {
 	if mt.client != nil && mt.client.IsConnected() {
 		return nil
 	}
@@ -112,13 +113,13 @@ func (mt *MqttTransport) Connect(buffer int) error {
 // Disconnect closes the MQTT connection and the message channel.
 // It ensures that the client is disconnected and the channel is closed
 // to prevent further message processing.
-func (mt *MqttTransport) Disconnect() {
+func (mt *Transport) Disconnect() {
 	if mt.client != nil && mt.client.IsConnected() {
 		mt.client.Disconnect(1000)
 		close(mt.messagesCh)
 	}
 }
 
-func (mt *MqttTransport) handleMessage(_ mqtt.Client, message mqtt.Message) {
+func (mt *Transport) handleMessage(_ mqtt.Client, message mqtt.Message) {
 	mt.messagesCh <- message
 }
