@@ -31,31 +31,24 @@ type Transport struct {
 
 // SendPacketOptions holds configuration options for sending a mesh packet.
 type SendPacketOptions struct {
-	ChannelID string
-	DeviceID  string
+	DeviceID string
 }
 
-// SendToMesh sends a mesh packet to the network via MQTT.
-func (mt *Transport) SendToMesh(_ context.Context, packet *proto.MeshPacket) error {
-	topic := fmt.Sprintf("%s/2/e/%s/%s", mt.RootTopic, mt.SendOpts.ChannelID, mt.SendOpts.DeviceID)
-
-	envelope := proto.ServiceEnvelope{
-		Packet:    packet,
-		ChannelId: mt.SendOpts.ChannelID,
-		GatewayId: mt.SendOpts.DeviceID,
-	}
-	msgData, err := protobuf.Marshal(&envelope)
+// SendEnvelope sends an envelope to MQTT.
+func (mt *Transport) SendEnvelope(envelope *proto.ServiceEnvelope) error {
+	msgData, err := protobuf.Marshal(envelope)
 	if err != nil {
 		return fmt.Errorf("marshalling error: %w", err)
 	}
 
+	topic := fmt.Sprintf("%s/2/e/%s/%s", mt.RootTopic, envelope.GetChannelId(), envelope.GetGatewayId())
 	token := mt.client.Publish(topic, 0, false, msgData)
 	<-token.Done()
 	return token.Error()
 }
 
-// ReceiveFromMesh receives a mesh packet from the network via MQTT.
-func (mt *Transport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, error) {
+// ReceiveEnvelope receives a envelope from MQTT.
+func (mt *Transport) ReceiveEnvelope(ctx context.Context) (*proto.ServiceEnvelope, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -64,13 +57,22 @@ func (mt *Transport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, er
 			return nil, nil // TODO: return error?
 		}
 
-		var envelope proto.ServiceEnvelope
-		if err := protobuf.Unmarshal(msg.Payload(), &envelope); err != nil {
+		envelope := new(proto.ServiceEnvelope)
+		if err := protobuf.Unmarshal(msg.Payload(), envelope); err != nil {
 			return nil, meshtastic.ErrInvalidPacketFormat
 		}
 
-		return envelope.GetPacket(), nil
+		return envelope, nil
 	}
+}
+
+// ReceiveFromMesh receives a mesh packet from the network via MQTT.
+func (mt *Transport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, error) {
+	envelope, err := mt.ReceiveEnvelope(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return envelope.GetPacket(), nil
 }
 
 // Connect establishes an MQTT connection to the broker.
