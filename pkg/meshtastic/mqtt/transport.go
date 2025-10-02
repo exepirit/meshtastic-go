@@ -3,6 +3,7 @@ package mqtt
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic"
@@ -78,14 +79,13 @@ func (mt *Transport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, er
 // Connect establishes an MQTT connection to the broker.
 // It generates a random client ID, connects to the broker, and subscribes
 // to all subtopics under the RootTopic.
-func (mt *Transport) Connect(buffer int) error {
+func (mt *Transport) Connect() error {
 	if mt.client != nil && mt.client.IsConnected() {
 		return nil
 	}
 
 	randomId := make([]byte, 4)
 	_, _ = rand.Read(randomId)
-	mt.messagesCh = make(chan mqtt.Message, buffer)
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(mt.BrokerURL)
@@ -102,10 +102,20 @@ func (mt *Transport) Connect(buffer int) error {
 		return fmt.Errorf("failed to connect MQTT: %w", err)
 	}
 
-	token = mt.client.Subscribe(mt.RootTopic+"/#", 0, mt.handleMessage)
+	return nil
+}
+
+// HandleMessages starts incoming messages handling routing.
+func (mt *Transport) HandleMessages(buffer int) error {
+	if mt.client == nil || !mt.client.IsConnected() {
+		return errors.New("connection is not established")
+	}
+
+	mt.messagesCh = make(chan mqtt.Message, buffer)
+
+	token := mt.client.Subscribe(mt.RootTopic+"/#", 0, mt.handleMessage)
 	<-token.Done()
 	if err := token.Error(); err != nil {
-		mt.Disconnect()
 		return fmt.Errorf("failed to subscribe to topic: %w", err)
 	}
 
