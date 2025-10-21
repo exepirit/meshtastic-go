@@ -23,7 +23,7 @@ type Transport struct {
 
 // SendToRadio sends a protobuf message to the radio through the Meshtastic API.
 func (ht *Transport) SendToRadio(ctx context.Context, packet *proto.ToRadio) error {
-	body, err := packet.MarshalVT()
+	body, err := protobuf.Marshal(packet)
 	if err != nil {
 		return fmt.Errorf("marshalling error: %w", err)
 	}

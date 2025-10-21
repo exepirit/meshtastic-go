@@ -92,7 +92,7 @@ func (st *StreamTransport) readBytes() ([]byte, error) {
 
 // SendToRadio sends a protobuf message to the radio.
 func (st *StreamTransport) SendToRadio(ctx context.Context, packet *proto.ToRadio) error {
-	buf, err := packet.MarshalVT()
+	buf, err := protobuf.Marshal(packet)
 	if err != nil {
 		return fmt.Errorf("marshalling error: %w", err)
 	}
