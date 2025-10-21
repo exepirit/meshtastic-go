@@ -10,7 +10,6 @@ import (
 	"go.bug.st/serial"
 	protobuf "google.golang.org/protobuf/proto"
 	"io"
-	"log/slog"
 	"sync"
 )
 
@@ -25,7 +24,9 @@ func NewTransport(port string) (*StreamTransport, error) {
 		return nil, fmt.Errorf("failed to open serial port: %w", err)
 	}
 
-	return &StreamTransport{Stream: p}, nil
+	return &StreamTransport{
+		Stream: p,
+	}, nil
 }
 
 var _ meshtastic.Transport = &StreamTransport{}
@@ -33,7 +34,6 @@ var _ meshtastic.Transport = &StreamTransport{}
 // StreamTransport represents a transport layer using a Stream (e.g., TCP connection or serial port).
 type StreamTransport struct {
 	Stream io.ReadWriteCloser
-	Logger *slog.Logger
 	lock   sync.Mutex
 }
 
