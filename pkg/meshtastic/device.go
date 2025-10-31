@@ -9,7 +9,7 @@ import (
 
 // NewConfiguredDevice creates a new Device instance with a given transport and initializes
 // it by retrieving the device's configuration from the hardware.
-func NewConfiguredDevice(ctx context.Context, transport Transport) (*Device, error) {
+func NewConfiguredDevice(ctx context.Context, transport HardwareTransport) (*Device, error) {
 	d := new(Device)
 	d.Transport = transport
 	config, err := d.Config().GetState(ctx)
@@ -22,7 +22,7 @@ func NewConfiguredDevice(ctx context.Context, transport Transport) (*Device, err
 
 // Device represents a device, encapsulating the transport used to communicate with the hardware.
 type Device struct {
-	Transport Transport
+	Transport HardwareTransport
 	NodeID    uint32
 
 	lastPacketID uint32

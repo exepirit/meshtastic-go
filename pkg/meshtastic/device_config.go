@@ -10,7 +10,7 @@ import (
 
 // DeviceModuleConfig provides actions for device configuration.
 type DeviceModuleConfig struct {
-	transport Transport
+	transport HardwareTransport
 }
 
 // GetState sends a request for the current configuration to the radio and retrieves the state of the device.

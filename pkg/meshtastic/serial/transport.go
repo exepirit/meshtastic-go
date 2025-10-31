@@ -29,7 +29,7 @@ func NewTransport(port string) (*StreamTransport, error) {
 	}, nil
 }
 
-var _ meshtastic.Transport = &StreamTransport{}
+var _ meshtastic.HardwareTransport = &StreamTransport{}
 
 // StreamTransport represents a transport layer using a Stream (e.g., TCP connection or serial port).
 type StreamTransport struct {

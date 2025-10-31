@@ -5,8 +5,8 @@ import (
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 )
 
-// Transport defines methods for sending and receiving packets directly to and from the radio hardware.
-type Transport interface {
+// HardwareTransport defines methods for sending and receiving packets directly to and from the radio hardware.
+type HardwareTransport interface {
 	// SendToRadio sends a packet to the radio hardware.
 	SendToRadio(ctx context.Context, packet *proto.ToRadio) error
 	// ReceiveFromRadio receives a packet from the radio hardware.

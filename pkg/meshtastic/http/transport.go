@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-var _ meshtastic.Transport = &Transport{}
+var _ meshtastic.HardwareTransport = &Transport{}
 
 // Transport represents a transport mechanism over HTTP for communicating with a Meshtastic device.
 type Transport struct {
