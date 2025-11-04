@@ -9,6 +9,7 @@ import (
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic"
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	protobuf "google.golang.org/protobuf/proto"
+	"time"
 )
 
 // Transport is an MQTT-based transport for Meshtastic communication.
@@ -25,6 +26,8 @@ type Transport struct {
 	RootTopic string
 	// SendOpts is the configuration options for sending a mesh packet.
 	SendOpts SendPacketOptions
+	// BufferSize is the internal messages queue size.
+	BufferSize int
 
 	client     mqtt.Client
 	messagesCh chan mqtt.Message
@@ -50,12 +53,16 @@ func (mt *Transport) SendEnvelope(envelope *proto.ServiceEnvelope) error {
 
 // ReceiveEnvelope receives a envelope from MQTT.
 func (mt *Transport) ReceiveEnvelope(ctx context.Context) (*proto.ServiceEnvelope, error) {
+	if mt.client == nil || !mt.client.IsConnected() || mt.messagesCh == nil {
+		return nil, ErrNotConnected
+	}
+
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	case msg := <-mt.messagesCh:
-		if msg == nil {
-			return nil, nil // TODO: return error?
+		if msg == nil { // channel is closed
+			return nil, ErrNotConnected
 		}
 
 		envelope := new(proto.ServiceEnvelope)
@@ -86,6 +93,10 @@ func (mt *Transport) Connect() error {
 
 	randomId := make([]byte, 4)
 	_, _ = rand.Read(randomId)
+	bufferSize := mt.BufferSize
+	if bufferSize <= 0 {
+		bufferSize = 100
+	}
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(mt.BrokerURL)
@@ -93,8 +104,19 @@ func (mt *Transport) Connect() error {
 	opts.SetPassword(mt.Password)
 	opts.SetClientID(fmt.Sprintf("%s-%x", mt.AppName, randomId))
 	opts.SetOrderMatters(false)
+	opts.SetAutoReconnect(true)
+	opts.SetKeepAlive(5 * time.Second)
+	opts.SetCleanSession(true)
+	opts.SetOnConnectHandler(func(client mqtt.Client) {
+		if err := mt.handleMessages(); err != nil {
+			Logger.Error("Failed to create subscriptions", "error", err)
+		} else {
+			Logger.Debug("Connection and subscriptions re-established")
+		}
+	})
 
 	mt.client = mqtt.NewClient(opts)
+	mt.messagesCh = make(chan mqtt.Message, bufferSize)
 
 	token := mt.client.Connect()
 	<-token.Done()
@@ -102,16 +124,16 @@ func (mt *Transport) Connect() error {
 		return fmt.Errorf("failed to connect MQTT: %w", err)
 	}
 
+	Logger.Debug("Connected to broker")
 	return nil
 }
 
-// HandleMessages starts incoming messages handling routing.
-func (mt *Transport) HandleMessages(buffer int) error {
+// handleMessages starts incoming messages handling routing.
+func (mt *Transport) handleMessages() error {
 	if mt.client == nil || !mt.client.IsConnected() {
 		return errors.New("connection is not established")
 	}
-
-	mt.messagesCh = make(chan mqtt.Message, buffer)
+	Logger.Debug("Connection established. Creating subscription to root topic")
 
 	token := mt.client.Subscribe(mt.RootTopic+"/#", 0, mt.handleMessage)
 	<-token.Done()
@@ -119,6 +141,7 @@ func (mt *Transport) HandleMessages(buffer int) error {
 		return fmt.Errorf("failed to subscribe to topic: %w", err)
 	}
 
+	Logger.Debug("Subscribed to the root topic")
 	return nil
 }
 
@@ -128,10 +151,15 @@ func (mt *Transport) HandleMessages(buffer int) error {
 func (mt *Transport) Disconnect() {
 	if mt.client != nil && mt.client.IsConnected() {
 		mt.client.Disconnect(1000)
+		Logger.Debug("Disconnected from broker")
+	}
+	if mt.messagesCh != nil {
 		close(mt.messagesCh)
+		Logger.Debug("Buffer channel is closed")
 	}
 }
 
 func (mt *Transport) handleMessage(_ mqtt.Client, message mqtt.Message) {
+	Logger.Debug("A new message received")
 	mt.messagesCh <- message
 }

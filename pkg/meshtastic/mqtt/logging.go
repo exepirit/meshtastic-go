@@ -1,0 +1,5 @@
+package mqtt
+
+import "github.com/exepirit/meshtastic-go/internal/log"
+
+var Logger = log.NOOPLogger{}
