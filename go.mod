@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	go.bug.st/serial v1.6.2
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.34.2
 	tinygo.org/x/bluetooth v0.13.0
 )
 
