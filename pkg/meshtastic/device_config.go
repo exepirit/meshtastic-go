@@ -3,9 +3,10 @@ package meshtastic
 import (
 	"context"
 	"fmt"
-	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	"log/slog"
 	"math/rand"
+
+	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 )
 
 // DeviceModuleConfig provides actions for device configuration.
@@ -44,6 +45,11 @@ func (m *DeviceModuleConfig) GetState(ctx context.Context) (DeviceState, error) 
 			state.Channels = append(state.Channels, payload.Channel)
 		case *proto.FromRadio_Metadata:
 			state.Device = payload.Metadata
+		case *proto.FromRadio_Config:
+			switch payload.Config.PayloadVariant.(type) {
+			case *proto.Config_Network:
+				state.NetworkConfig = payload.Config.GetNetwork()
+			}
 		case *proto.FromRadio_ConfigCompleteId:
 			if payload.ConfigCompleteId == configId {
 				return state, nil
@@ -56,10 +62,11 @@ func (m *DeviceModuleConfig) GetState(ctx context.Context) (DeviceState, error) 
 
 // DeviceState represents the current state of a device.
 type DeviceState struct {
-	MyInfo   *proto.MyNodeInfo
-	Nodes    []*proto.NodeInfo
-	Channels []*proto.Channel
-	Device   *proto.DeviceMetadata
+	MyInfo        *proto.MyNodeInfo
+	Nodes         []*proto.NodeInfo
+	Channels      []*proto.Channel
+	Device        *proto.DeviceMetadata
+	NetworkConfig *proto.Config_NetworkConfig
 }
 
 // CurrentNodeInfo returns the current node info if available.
