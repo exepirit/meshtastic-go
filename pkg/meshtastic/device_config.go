@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"reflect"
 
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 )
@@ -34,7 +35,7 @@ func (m *DeviceModuleConfig) GetState(ctx context.Context) (DeviceState, error) 
 		if err != nil {
 			return state, fmt.Errorf("failed to read response: %w", err)
 		}
-		slog.Debug("Received packet from radio")
+		slog.Debug("Received packet from radio", slog.Any("payloadVariant", reflect.TypeOf(packet.PayloadVariant)))
 
 		switch payload := packet.PayloadVariant.(type) {
 		case *proto.FromRadio_MyInfo:
