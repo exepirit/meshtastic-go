@@ -85,13 +85,26 @@ func (t *Transport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, err
 	if err != nil {
 		return nil, err
 	}
-	Logger.Debug("Received UDP packet", "from", addr)
+
+	logAttrs := []any{
+		"from", addr,
+	}
+
+	defer func() {
+		Logger.Debug("Received UDP packet", logAttrs...)
+	}()
 
 	packet := new(proto.MeshPacket)
 	err = protobuf.Unmarshal(buf[:n], packet)
 	if err != nil {
 		return nil, meshtastic.ErrInvalidPacketFormat
 	}
+	logAttrs = append(logAttrs,
+		"meshID", fmt.Sprintf("%08x", packet.Id),
+		"meshFrom", fmt.Sprintf("%08x", packet.From),
+		"meshTo", fmt.Sprintf("%08x", packet.To),
+		"meshChannel", uint64(packet.Channel),
+	)
 	return packet, nil
 }
 
