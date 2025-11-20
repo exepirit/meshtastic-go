@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic"
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	protobuf "google.golang.org/protobuf/proto"
-	"io"
-	"net/http"
 )
 
 var _ meshtastic.HardwareTransport = &Transport{}
@@ -32,6 +33,7 @@ func (ht *Transport) SendToRadio(ctx context.Context, packet *proto.ToRadio) err
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
+	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Content-Type", "application/x-protobuf")
 
 	response, err := ht.Client.Do(req)
@@ -52,6 +54,8 @@ func (ht *Transport) ReceiveFromRadio(ctx context.Context) (*proto.FromRadio, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
+
+	req.Header.Set("Connection", "keep-alive")
 
 	response, err := ht.Client.Do(req)
 	if err != nil {
