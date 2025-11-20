@@ -2,6 +2,7 @@ package meshtastic
 
 import (
 	"context"
+
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 )
 
@@ -16,8 +17,18 @@ type HardwareTransport interface {
 // MeshTransport defines methods for sending and receiving mesh packets over the network,
 // abstracting the underlying radio communication.
 type MeshTransport interface {
+	PacketSender
+	PacketReceiver
+}
+
+// PacketSender defines the interface for sending mesh packets.
+type PacketSender interface {
 	// SendToMesh sends a mesh packet to the network.
 	SendToMesh(ctx context.Context, packet *proto.MeshPacket) error
+}
+
+// PacketReceiver defines the interface for receiving mesh packets.
+type PacketReceiver interface {
 	// ReceiveFromMesh receives a mesh packet from the network.
 	ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, error)
 }
