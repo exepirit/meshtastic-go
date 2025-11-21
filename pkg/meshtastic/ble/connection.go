@@ -3,6 +3,7 @@ package ble
 import (
 	"context"
 	"fmt"
+
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	"tinygo.org/x/bluetooth"
 )
@@ -26,6 +27,7 @@ func connect(_ context.Context, adapter *bluetooth.Adapter, matchFunc deviceMatc
 	candidate := make(chan bluetooth.ScanResult, 1)
 	err := adapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
 		if matchFunc(result) {
+			Logger.Debug("Found matching Bluetooth device", "mac", result.Address.String())
 			_ = adapter.StopScan()
 			candidate <- result
 		}
@@ -40,6 +42,7 @@ func connect(_ context.Context, adapter *bluetooth.Adapter, matchFunc deviceMatc
 		return Transport{}, fmt.Errorf("failed to connect device %s: %w", result.Address, err)
 	}
 
+	Logger.Debug("Connected to device", "mac", device.Address.String())
 	services, err := device.DiscoverServices([]bluetooth.UUID{MeshBluetoothServiceID})
 	switch {
 	case err != nil:
@@ -55,6 +58,8 @@ func connect(_ context.Context, adapter *bluetooth.Adapter, matchFunc deviceMatc
 	if err != nil {
 		return Transport{}, fmt.Errorf("failed to discover BLE characteristics: %w", err)
 	}
+
+	Logger.Debug("All device characteristics discovered")
 
 	t := Transport{
 		device:    device,

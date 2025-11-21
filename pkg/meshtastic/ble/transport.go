@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic"
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic/proto"
 	protobuf "google.golang.org/protobuf/proto"
-	"log/slog"
 	"tinygo.org/x/bluetooth"
 )
 
@@ -79,6 +79,8 @@ func (t Transport) start() error {
 		return fmt.Errorf("failed to send WantConfigId packet: %w", err)
 	}
 
+	Logger.Debug("Configuration discovery packet is sent. Waiting for response")
+
 	// read packets until an error occurs, or we get a non-empty queue
 	var readErr error
 	for {
@@ -93,6 +95,8 @@ func (t Transport) start() error {
 		return fmt.Errorf("unexpected error while reading packets: %w", readErr)
 	}
 
+	Logger.Info("Connected to device", "mac", t.device.Address.String())
+
 	// enable notifications for fromNum
 	return t.fromNum.EnableNotifications(func(_ []byte) {
 		t.pullPackets()
@@ -106,14 +110,17 @@ func (t Transport) pullPackets() {
 		packet, err := t.readPacket()
 		switch {
 		case errors.Is(err, errEmptyQueue):
+			Logger.Debug("Device packets queue is empty")
 			return
 		case err != nil:
-			slog.Warn("Read packet from device error", "error", err)
+			Logger.Error("Read packet from device error", "error", err)
 		default:
+			Logger.Debug("New packet received from device")
 			if len(t.packets) == packetsBufferSize {
 				<-t.packets
 			}
 			t.packets <- packet
+			Logger.Debug("Received packet enqueued for consumer")
 		}
 	}
 }
