@@ -9,12 +9,12 @@ import (
 )
 
 // ConnectMAC connects to a BLE device using the specified MAC address.
-func ConnectMAC(ctx context.Context, address string) (Transport, error) {
+func ConnectMAC(ctx context.Context, address string) (*Transport, error) {
 	return connect(ctx, bluetooth.DefaultAdapter, matchMacAddress(address))
 }
 
 // ConnectNamed connects to a BLE device using the specified device name.
-func ConnectNamed(ctx context.Context, deviceName string) (Transport, error) {
+func ConnectNamed(ctx context.Context, deviceName string) (*Transport, error) {
 	return connect(ctx, bluetooth.DefaultAdapter, matchName(deviceName))
 }
 
@@ -23,7 +23,7 @@ func ConnectNamed(ctx context.Context, deviceName string) (Transport, error) {
 // connects to the first matching device, and initializes the Transport.
 //
 // TODO: handle context
-func connect(_ context.Context, adapter *bluetooth.Adapter, matchFunc deviceMatchFunc) (Transport, error) {
+func connect(_ context.Context, adapter *bluetooth.Adapter, matchFunc deviceMatchFunc) (*Transport, error) {
 	candidate := make(chan bluetooth.ScanResult, 1)
 	err := adapter.Scan(func(adapter *bluetooth.Adapter, result bluetooth.ScanResult) {
 		if matchFunc(result) {
@@ -33,22 +33,22 @@ func connect(_ context.Context, adapter *bluetooth.Adapter, matchFunc deviceMatc
 		}
 	})
 	if err != nil {
-		return Transport{}, fmt.Errorf("failed to seek device: %w", err)
+		return nil, fmt.Errorf("failed to seek device: %w", err)
 	}
 
 	result := <-candidate
 	device, err := adapter.Connect(result.Address, bluetooth.ConnectionParams{})
 	if err != nil {
-		return Transport{}, fmt.Errorf("failed to connect device %s: %w", result.Address, err)
+		return nil, fmt.Errorf("failed to connect device %s: %w", result.Address, err)
 	}
 
 	Logger.Debug("Connected to device", "mac", device.Address.String())
 	services, err := device.DiscoverServices([]bluetooth.UUID{MeshBluetoothServiceID})
 	switch {
 	case err != nil:
-		return Transport{}, fmt.Errorf("failed to search MeshBluetoothService: %w", err)
+		return nil, fmt.Errorf("failed to search MeshBluetoothService: %w", err)
 	case len(services) < 1:
-		return Transport{}, fmt.Errorf("no MeshBluetoothService on device %s", device.Address)
+		return nil, fmt.Errorf("no MeshBluetoothService on device %s", device.Address)
 	}
 	service := services[0]
 
@@ -56,12 +56,12 @@ func connect(_ context.Context, adapter *bluetooth.Adapter, matchFunc deviceMatc
 		FromRadioPropertyID, ToRadioPropertyID, FromNumPropertyID,
 	})
 	if err != nil {
-		return Transport{}, fmt.Errorf("failed to discover BLE characteristics: %w", err)
+		return nil, fmt.Errorf("failed to discover BLE characteristics: %w", err)
 	}
 
 	Logger.Debug("All device characteristics discovered")
 
-	t := Transport{
+	t := &Transport{
 		device:    device,
 		fromRadio: properties[0],
 		toRadio:   properties[1],
