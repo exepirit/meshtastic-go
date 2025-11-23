@@ -5,13 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/url"
 	"os/signal"
 	"syscall"
 
 	"github.com/exepirit/meshtastic-go/pkg/meshtastic"
-	"github.com/exepirit/meshtastic-go/pkg/meshtastic/http"
-	"github.com/exepirit/meshtastic-go/pkg/meshtastic/serial"
+	"github.com/exepirit/meshtastic-go/pkg/meshtastic/connect"
 )
 
 func main() {
@@ -19,29 +17,16 @@ func main() {
 	defer cancel()
 
 	// parse CLI flags
-	deviceURLStr := flag.String("device", "serial:/dev/ttyS0", "Device URL (supported schema: serial, http)")
+	deviceURL := flag.String("device", "serial:/dev/ttyS0", "Device URL")
 	flag.Parse()
-	deviceURL, err := url.Parse(*deviceURLStr)
-	if err != nil {
-		log.Fatalln("Device URL is not valid")
-	}
 
 	// setup connection to device via adapter called HardwareTransport
 	log.Println("Connecting to device...")
-	var transport meshtastic.HardwareTransport
-	switch deviceURL.Scheme {
-	case "serial":
-		serialTransport, err := serial.NewTransport(deviceURL.Path)
-		if err != nil {
-			log.Fatalln("Failed to open port:", err)
-		}
-		defer serialTransport.Close()
-		transport = serialTransport
-	case "http", "https":
-		transport = &http.Transport{URL: deviceURL.String()}
-	default:
-		log.Fatalln("Unsupported URL scheme", deviceURL.Scheme)
+	transport, err := connect.NewTransport(*deviceURL)
+	if err != nil {
+		log.Fatalln("Unable to create device transport:", err)
 	}
+	defer connect.CloseTransport(transport)
 
 	// connect to device
 	device, err := meshtastic.NewConfiguredDevice(ctx, transport)
