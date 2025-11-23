@@ -17,54 +17,21 @@ type Transport struct {
 	conn *net.UDPConn
 }
 
+// NewTransport creates a new UDP transport for the Meshtastic device, using the default port (4403).
 func NewTransport(host string) (*Transport, error) {
+	return NewTransportPort(host, 4403)
+}
+
+// NewTransportPort creates a new UDP transport for the Meshtastic device using the specified host and port.
+// It resolves the correct network interface to use, listens on a multicast UDP address, and initializes
+// the transport connection.
+func NewTransportPort(host string, port int) (*Transport, error) {
 	// Detect which interface routes to the Meshtastic device
-	addr, err := net.ResolveUDPAddr("udp", host+":4403")
-	if err != nil {
-		return nil, err
-	}
+	_, iface, err := resolveLocalAddress(host, port)
+	Logger.Debug("Found device interface", "interface", iface)
 
-	conn, err := net.DialUDP("udp4", nil, addr)
-	if err != nil {
-		return nil, err
-	}
-
-	laddr := conn.LocalAddr().(*net.UDPAddr).IP
-
-	err = conn.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	intfs, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-
-	var foundIntf *net.Interface
-	for _, intf := range intfs {
-		if addrs, err := intf.Addrs(); err == nil {
-			for _, addr := range addrs {
-				if addrNet, ok := addr.(*net.IPNet); ok && laddr.Equal(addrNet.IP) {
-					foundIntf = &intf
-					break
-				}
-			}
-		}
-		if foundIntf != nil {
-			break
-		}
-	}
-
-	if foundIntf == nil {
-		return nil, fmt.Errorf("could not find interface for local address %+v", laddr)
-	}
-
-	Logger.Info("Found device interface", "interface", foundIntf)
-
-	gaddr := &net.UDPAddr{IP: net.IPv4(224, 0, 0, 69), Port: 4403}
-
-	conn, err = net.ListenMulticastUDP("udp4", foundIntf, gaddr)
+	broadcastAddr := &net.UDPAddr{IP: net.IPv4(224, 0, 0, 69), Port: port}
+	conn, err := net.ListenMulticastUDP("udp4", &iface, broadcastAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -74,10 +41,13 @@ func NewTransport(host string) (*Transport, error) {
 	}, nil
 }
 
+// SendToMesh sends a mesh packet over the UDP transport.
+// Currently, this method is unimplemented and will return an error.
 func (t *Transport) SendToMesh(ctx context.Context, packet *proto.MeshPacket) error {
 	return fmt.Errorf("unimplemented")
 }
 
+// ReceiveFromMesh receives a mesh packet from the UDP transport.
 func (t *Transport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, error) {
 	// TODO: handle ctx.Done()
 	buf := make([]byte, 1500)
@@ -86,28 +56,21 @@ func (t *Transport) ReceiveFromMesh(ctx context.Context) (*proto.MeshPacket, err
 		return nil, err
 	}
 
-	logAttrs := []any{
-		"from", addr,
-	}
-
-	defer func() {
-		Logger.Debug("Received UDP packet", logAttrs...)
-	}()
-
 	packet := new(proto.MeshPacket)
-	err = protobuf.Unmarshal(buf[:n], packet)
-	if err != nil {
+	if err := protobuf.Unmarshal(buf[:n], packet); err != nil {
 		return nil, meshtastic.ErrInvalidPacketFormat
 	}
-	logAttrs = append(logAttrs,
+
+	Logger.Debug("Received UDP packet",
+		"from", addr,
 		"meshID", fmt.Sprintf("%08x", packet.Id),
 		"meshFrom", fmt.Sprintf("%08x", packet.From),
 		"meshTo", fmt.Sprintf("%08x", packet.To),
-		"meshChannel", uint64(packet.Channel),
-	)
+		"meshChannel", uint64(packet.Channel))
 	return packet, nil
 }
 
+// Close closes the UDP connection associated with the transport.
 func (t *Transport) Close() error {
 	return t.conn.Close()
 }
